@@ -20,11 +20,7 @@ export default function ProjectPage({ params }){
   const [mode, setMode] = useState('smart');
   const [feedRatio, setFeedRatio] = useState('4:5');
   const [busy, setBusy] = useState(false);
-
-  const [slidesPerCarousel, setSlidesPerCarousel] = useState(10);
-  const [carouselsCount, setCarouselsCount] = useState(10);
-  const [singlesCount, setSinglesCount] = useState(5);
-  const [miniCount, setMiniCount] = useState(5);
+  const [dirty, setDirty] = useState(false);
 
   const [page, setPage] = useState(1);
   const pageSize = 50;
@@ -70,14 +66,19 @@ export default function ProjectPage({ params }){
     }
     const next = { ...proj, images:[...(proj.images||[]), ...items] };
     updateProject(next);
+    setDirty(true);
   }
 
   function togglePref(tag){
     let next = prefs.includes(tag) ? prefs.filter(t=>t!==tag) : [...prefs, tag];
     if(next.length>20) next = next.slice(0,20);
-    setPrefs(next);
+    setPrefs(next); setDirty(true);
     updateProject({ ...proj, preferences: next, category, mode, feedRatio });
   }
+
+  function changeCategory(cat){ setCategory(cat); setDirty(true); updateProject({ ...proj, category:cat }); }
+  function changeMode(m){ setMode(m); setDirty(true); updateProject({ ...proj, mode:m }); }
+  function changeRatio(r){ setFeedRatio(r); setDirty(true); updateProject({ ...proj, feedRatio:r }); }
 
   const visibleTags = useMemo(()=>{
     const all = [...(CATEGORY_UNIQUE[category]||[]), ...GLOBAL_TAGS];
@@ -95,7 +96,7 @@ export default function ProjectPage({ params }){
         const data = ctx.getImageData(0,0,c.width,c.height).data;
         let sum=0, sumSq=0, edges=0;
         for(let i=0;i<data.length;i+=4){ const y = 0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2]; sum+=y; sumSq+=y*y; }
-        const n = data.length/4; const mean = sum/n; const variance = sumSq/n - mean*mean;
+        const n = data.length/4; const variance = sumSq/n - (sum/n)*(sum/n);
         for(let y=1;y<c.height-1;y+=2){ for(let x=1;x<c.width-1;x+=2){ const p = (y*c.width + x)*4; const gx = data[p+4]-data[p-4]; const gy = data[p+c.width*4]-data[p-c.width*4]; const mag = Math.abs(gx)+Math.abs(gy); if(mag>100) edges++; } }
         resolve({ width:w, height:h, contrast: Math.max(0, Math.min(1, variance/5000)), edges });
       }; img.onerror = ()=>resolve({width:0,height:0,contrast:0,edges:0}); img.src = url;
@@ -141,19 +142,20 @@ export default function ProjectPage({ params }){
     for(let m=0;m<5;m++){ const slides = Math.max(2, Math.min(9, Math.floor(Math.random()*8)+2)); const pick = pickUnique(scores, slides, used); if(pick.length) pack.minis.push({ id:crypto.randomUUID(), images: pick }); }
     const next = { ...proj, pack, lastGeneratedAt: new Date().toISOString() };
     updateProject(next);
+    setDirty(false);
     setTimeout(()=>setBusy(false), 400);
   }
 
   async function exportZip(){
     if(!proj?.pack) return;
     const zip = new JSZip();
-    const root = zip.folder((proj.name||'Curatist').replace(/[^a-z0-9\- _]/gi,'_'));
+    const root = zip.folder((proj.name||'Curatist').replace(/[^a-z0-9\\- _]/gi,'_'));
     async function add(folderName, sets){
       const fld = root.folder(folderName);
       let idx=1;
       for(const set of sets){
         const sub = fld.folder(String(idx).padStart(2,'0'));
-        let i=1; for(const img of set.images){ const blob = await fetch(img.objectUrl).then(r=>r.blob()); sub.file(`slide_${{String(i).padStart(2,'0')}}.jpg`, blob); i++; }
+        let i=1; for(const img of set.images){ const blob = await fetch(img.objectUrl).then(r=>r.blob()); sub.file(`slide_${String(i).padStart(2,'0')}.jpg`, blob); i++; }
         idx++;
       }
     }
@@ -176,8 +178,13 @@ export default function ProjectPage({ params }){
   return (
     <div>
       <div className="card" style={{position:'relative'}}>
-        <h2 style={{marginBottom:4}}>{proj.name}</h2>
-        <small className="muted">{total} images uploaded</small>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div><h2 style={{marginBottom:4}}>{proj.name}</h2><small style={{color:'#666'}}>{total} images uploaded</small></div>
+          <div className="toolbar">
+            <a className="btn secondary" href="/">Back to Home</a>
+            <button className="btn secondary" onClick={generatePack} disabled={busy || !proj.images?.length}>{dirty ? 'Refresh (tags updated)' : 'Regenerate'}</button>
+          </div>
+        </div>
         {busy && (
           <div style={{position:'absolute',inset:0,backdropFilter:'blur(2px)',background:'rgba(255,255,255,.7)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',borderRadius:12}}>
             <div className="spinner" />
@@ -195,8 +202,8 @@ export default function ProjectPage({ params }){
           <div>
             <label>Feed Preview Ratio</label>
             <div style={{display:'flex',gap:8}}>
-              <button className={"btn secondary"} style={{opacity:feedRatio==='4:5'?1:0.7}} onClick={()=>{setFeedRatio('4:5'); updateProject({...proj, feedRatio:'4:5'});}}>4:5</button>
-              <button className={"btn secondary"} style={{opacity:feedRatio==='3:4'?1:0.7}} onClick={()=>{setFeedRatio('3:4'); updateProject({...proj, feedRatio:'3:4'});}}>3:4</button>
+              <button className={"btn secondary"} style={{opacity:feedRatio==='4:5'?1:0.7}} onClick={()=>changeRatio('4:5')}>4:5</button>
+              <button className={"btn secondary"} style={{opacity:feedRatio==='3:4'?1:0.7}} onClick={()=>changeRatio('3:4')}>3:4</button>
             </div>
           </div>
         </div>
@@ -223,20 +230,20 @@ export default function ProjectPage({ params }){
         <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:12}}>
           <div>
             <label>Category</label>
-            <select className="select" value={category} onChange={e=>{setCategory(e.target.value); updateProject({...proj, category:e.target.value});}}>
+            <select className="select" value={category} onChange={e=>changeCategory(e.target.value)}>
               {Object.keys(CATEGORY_UNIQUE).map(k => <option key={k} value={k}>{k}</option>)}
             </select>
             <div className="hr" />
             <label>AI Mode</label>
             <div style={{display:'flex',gap:8,marginTop:6}}>
-              <button className={"btn secondary"} style={{opacity:mode==='classic'?1:0.7}} onClick={()=>{setMode('classic'); updateProject({...proj, mode:'classic'});}}>Classic (fast)</button>
-              <button className={"btn secondary"} style={{opacity:mode==='smart'?1:0.7}} onClick={()=>{setMode('smart'); updateProject({...proj, mode:'smart'});}}>Smart</button>
+              <button className={"btn secondary"} style={{opacity:mode==='classic'?1:0.7}} onClick={()=>changeMode('classic')}>Classic (fast)</button>
+              <button className={"btn secondary"} style={{opacity:mode==='smart'?1:0.7}} onClick={()=>changeMode('smart')}>Smart</button>
             </div>
           </div>
           <div>
-            <div className="search">
+            <div style={{display:'flex',gap:8,margin:'8px 0'}}>
               <input className="input" placeholder="Search tags..." value={search} onChange={e=>setSearch(e.target.value)} />
-              <div className="token">Selected: {prefs.length}/20</div>
+              <div className="btn ghost">Selected: {prefs.length}/20</div>
             </div>
             <div className="preferences">
               {[...(CATEGORY_UNIQUE[category]||[]), ...GLOBAL_TAGS].filter(t => !search || t.toLowerCase().includes(search.toLowerCase())).map(t => (
@@ -248,7 +255,7 @@ export default function ProjectPage({ params }){
       </div>
 
       <div className="card">
-        <h3>Posting Pack</h3>
+        <h3>Generate</h3>
         <div className="toolbar">
           <button className="btn" onClick={generatePack} disabled={!proj.images?.length || busy}>{busy?'Generating...':'Generate Posting Pack'}</button>
           {proj.pack && <button className="btn secondary" onClick={exportZip}>Export Pack (ZIP)</button>}
@@ -271,11 +278,6 @@ export default function ProjectPage({ params }){
                     <div style={{position:'relative',width:'100%',paddingTop:pad,background:'#f6f6f6',borderRadius:8,overflow:'hidden'}}>
                       <img src={img.thumb||img.objectUrl} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}} />
                     </div>
-                    <div style={{display:'flex',gap:6,marginTop:6}}>
-                      {i>0 && <button className="btn ghost" onClick={()=>{ const arr=[...c.images]; [arr[i-1],arr[i]]=[arr[i],arr[i-1]]; const pack={...proj.pack}; pack.carousels[idx].images=arr; updateProject({...proj, pack}); }}>←</button>}
-                      {i<c.images.length-1 && <button className="btn ghost" onClick={()=>{ const arr=[...c.images]; [arr[i+1],arr[i]]=[arr[i],arr[i+1]]; const pack={...proj.pack}; pack.carousels[idx].images=arr; updateProject({...proj, pack}); }}>→</button>}
-                      <button className="btn ghost" onClick={()=>{ const replacement = (proj.images||[]).find(x=>!c.images.some(ci=>ci.id===x.id)); if(!replacement) return; const arr=[...c.images]; arr[i]=replacement; const pack={...proj.pack}; pack.carousels[idx].images=arr; updateProject({...proj, pack}); }}>Swap</button>
-                    </div>
                   </div>
                 ))}
                 </div>
@@ -294,7 +296,7 @@ export default function ProjectPage({ params }){
                 )}
               </div>
             ))}
-            <h4>Mini-Carousels ({proj.pack.minis.length})</h4>
+            <h4>Minis ({proj.pack.minis.length})</h4>
             {proj.pack.minis.map((m,idx)=>(
               <div key={m.id} className="card">
                 <strong>Mini {idx+1}</strong>

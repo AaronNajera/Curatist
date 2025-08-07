@@ -12,10 +12,12 @@ export default function RootLayout({ children }){
       <body>
         <div className="container">
           <div className="header">
+            <a className="btn secondary" href="/">Home</a>
             <div className="logo">Curatist</div>
+            <div></div>
           </div>
           {children}
-          <div style={{marginTop:24}}><small className="muted">Client-only prototype - data stays in your browser</small></div>
+          <div style={{marginTop:24}}><small style={{color:'#666'}}>Client-only prototype — data stays in your browser</small></div>
         </div>
       </body>
     </html>

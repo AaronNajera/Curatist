@@ -21,8 +21,6 @@ export default function Home(){
     window.location.href = `/project/${id}`;
   }
 
-  function openProject(id){ window.location.href = `/project/${id}`; }
-
   return (
     <div>
       <div className="card">
@@ -41,9 +39,9 @@ export default function Home(){
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div>
                 <strong>{p.name}</strong>
-                <div><small className="muted">{new Date(p.createdAt).toLocaleString()}</small></div>
+                <div><small style={{color:'#666'}}>{new Date(p.createdAt).toLocaleString()}</small></div>
               </div>
-              <button className="btn secondary" onClick={()=>openProject(p.id)}>Open</button>
+              <a className="btn secondary" href={`/project/${p.id}`}>Open</a>
             </div>
           </div>
         ))}
