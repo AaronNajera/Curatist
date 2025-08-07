@@ -1,13 +1,21 @@
+
 import './styles/globals.css';
-export const metadata = { title: 'Photographer Posting Pack' };
+export const metadata = { title: 'Curatist' };
 export default function RootLayout({ children }){
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+      </head>
       <body>
         <div className="container">
-          <h1>Photographer Posting Pack</h1>
+          <div className="header">
+            <div className="logo">Curatist</div>
+          </div>
           {children}
-          <div className="footer"><small className="muted">No-backend prototype — all data stays in your browser</small></div>
+          <div style={{marginTop:24}}><small className="muted">Client-only prototype - data stays in your browser</small></div>
         </div>
       </body>
     </html>

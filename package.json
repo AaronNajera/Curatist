@@ -1,6 +1,6 @@
 {
-  "name": "photographer-posting-pack-starter",
-  "version": "0.1.0",
+  "name": "curatist-v0.3",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,9 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "jszip": "3.10.1"
+  },
+  "engines": {
+    "node": ">=18.17.0"
   },
   "type": "module"
 }
